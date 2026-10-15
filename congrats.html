@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Поздравление 🎈</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="bg-sparks"></div>
+  <div class="stage" id="stage"></div>
+
+  <main class="page">
+    <div class="congrats-top">
+      <h2>Тебя поздравляют! 🎉<span class="wave off" id="wave"><i></i><i></i><i></i><i></i><i></i></span></h2>
+    </div>
+
+    <div class="congrats-actions">
+      <button class="btn pulse" id="playBtn">▶ Включить поздравление</button>
+      <a class="btn ghost hidden" id="nextBtn" href="joke.html" data-next>Далее →</a>
+    </div>
+  </main>
+
+  <audio id="voice" preload="auto"></audio>
+
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    var audio = document.getElementById("voice");
+    var wave = document.getElementById("wave");
+    var playBtn = document.getElementById("playBtn");
+    var nextBtn = document.getElementById("nextBtn");
+    audio.src = CONFIG.voice;
+
+    var started = false;
+
+    function showNext() { nextBtn.classList.remove("hidden"); }
+
+    function startShow() {
+      if (started) return;
+      started = true;
+      playBtn.classList.add("hidden");
+      spawnLoop();
+    }
+
+    function play() {
+      startShow();
+      audio.play().then(function () {
+        wave.classList.remove("off");
+      }).catch(function () {
+        // если записи ещё нет — просто показываем фото и кнопку
+        showNext();
+      });
+    }
+
+    playBtn.addEventListener("click", play);
+    audio.addEventListener("ended", function () {
+      wave.classList.add("off");
+      showNext();
+    });
+    // запасной вариант: кнопка «Далее» появляется через 40 секунд в любом случае
+    playBtn.addEventListener("click", function () { setTimeout(showNext, 40000); });
+
+    // ---- всплывающие фото ----
+    var stage = document.getElementById("stage");
+    var idx = 0;
+
+    function spawn() {
+      if (!CONFIG.photos.length) return;
+      var src = CONFIG.photos[idx % CONFIG.photos.length];
+      idx++;
+      var img = new Image();
+      img.className = "pop";
+      img.onload = function () {
+        var w = stage.clientWidth, h = stage.clientHeight;
+        var size = img.getBoundingClientRect().width || 160;
+        img.style.left = Math.random() * Math.max(10, w - size - 10) + "px";
+        img.style.top = Math.random() * Math.max(10, h - size * 1.33 - 10) + "px";
+        img.style.setProperty("--r", (Math.random() * 20 - 10) + "deg");
+        stage.appendChild(img);
+        setTimeout(function () { img.remove(); }, 6200);
+      };
+      img.onerror = function () { /* нет файла — пропускаем */ };
+      img.src = src;
+    }
+
+    function spawnLoop() {
+      spawn();
+      setInterval(spawn, 1800);
+    }
+  </script>
+</body>
+</html>
