@@ -21,9 +21,13 @@ window.CONFIG = {
   // Запись голоса ребёнка с поздравлением
   voice: "voice.mp3",
 
-  // Сертификат, который скачивается на последней странице
-  certificate: "certificate.pdf",
+  // Сертификат на последней странице хранится ЗАШИФРОВАННЫМ (файл certificate.enc).
+  // Пароль нигде в коде не записан. Получить файл: открыть encrypt.html у себя на компьютере.
+  certificate: "certificate.enc",
   certificateFileName: "Сертификат для Юли.pdf",
+
+  // Необязательная подсказка к паролю (можно оставить пустой). Сам пароль сюда не писать!
+  passwordHint: "",
 
   // Ссылки на подарки
   jokeLink: "https://www.bodo.ua/ua/go/ekskursiya-terytoriyeyu-psykhlikarni-1-do-4-hod-107384/",

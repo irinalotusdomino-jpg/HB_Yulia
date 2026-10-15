@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Зашифровать сертификат 🔒</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .tool { text-align: left; display: flex; flex-direction: column; gap: 14px; }
+    .tool label { font-size: 16px; font-weight: 600; }
+    .tool input[type="password"], .tool input[type="text"], .tool input[type="file"] {
+      width: 100%; font-size: 18px; padding: 12px 14px; border-radius: 12px;
+      border: 2px solid rgba(255,255,255,.35); background: rgba(255,255,255,.92); color: #2d1442;
+    }
+    .tool .btn { align-self: center; margin-top: 6px; }
+    .status { min-height: 24px; font-size: 16px; text-align: center; }
+    .status.err { color: #ffd0d0; font-weight: 700; }
+    .status.ok { color: #c9ffd8; font-weight: 700; }
+    ol.how { text-align: left; line-height: 1.6; padding-left: 22px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Зашифровать сертификат 🔒</h1>
+
+    <div class="card tool">
+      <p class="hint" style="text-align:center">
+        Эта страница работает только в вашем браузере: файл и пароль никуда не отправляются.
+        Загружать её на GitHub не нужно.
+      </p>
+
+      <div>
+        <label for="file">1. Файл сертификата (PDF)</label>
+        <input id="file" type="file" accept=".pdf,application/pdf">
+      </div>
+      <div>
+        <label for="pw1">2. Придумайте пароль для Юли</label>
+        <input id="pw1" type="password" autocomplete="off">
+      </div>
+      <div>
+        <label for="pw2">3. Повторите пароль</label>
+        <input id="pw2" type="password" autocomplete="off">
+      </div>
+
+      <button class="btn" id="go">Зашифровать и скачать</button>
+      <p class="status" id="status"></p>
+    </div>
+
+    <div class="card">
+      <ol class="how">
+        <li>Скачается файл <b>certificate.enc</b>.</li>
+        <li>Загрузите его на GitHub рядом с остальными файлами сайта.</li>
+        <li>Сам PDF на GitHub не загружайте: он должен остаться только у вас.</li>
+        <li>Пароль не записан на сайте. Запомните его или сохраните отдельно.</li>
+      </ol>
+    </div>
+  </main>
+
+  <script src="vault.js"></script>
+  <script>
+    var st = document.getElementById("status");
+    function say(t, cls) { st.textContent = t; st.className = "status " + (cls || ""); }
+
+    function download(bytes, name) {
+      var url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+      var a = document.createElement("a");
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    }
+
+    document.getElementById("go").addEventListener("click", function () {
+      var f = document.getElementById("file").files[0];
+      var p1 = document.getElementById("pw1").value;
+      var p2 = document.getElementById("pw2").value;
+
+      if (!(globalThis.crypto && globalThis.crypto.subtle)) {
+        return say("Браузер не даёт шифровать на этой странице. Откройте её в Chrome или Edge.", "err");
+      }
+      if (!f) return say("Выберите PDF-файл сертификата.", "err");
+      if (p1.trim().length < 6) return say("Пароль слишком короткий: минимум 6 символов.", "err");
+      if (p1 !== p2) return say("Пароли не совпадают.", "err");
+
+      say("Шифрую…");
+      var reader = new FileReader();
+      reader.onload = function () {
+        var original = new Uint8Array(reader.result);
+        Vault.encryptBytes(original, p1).then(function (out) {
+          // проверка: файл должен открываться этим же паролем
+          return Vault.decryptBytes(out, p1).then(function (back) {
+            if (back.length !== original.length) throw new Error("verify");
+            download(out, "certificate.enc");
+            say("Готово! Файл certificate.enc скачан. Пароль проверен: он открывает файл.", "ok");
+          });
+        }).catch(function () {
+          say("Не получилось зашифровать. Попробуйте ещё раз.", "err");
+        });
+      };
+      reader.onerror = function () { say("Не удалось прочитать файл.", "err"); };
+      reader.readAsArrayBuffer(f);
+    });
+  </script>
+</body>
+</html>

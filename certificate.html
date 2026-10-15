@@ -6,6 +6,27 @@
   <title>Твой сертификат 🎟️</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20x='8'%20y='27'%20width='48'%20height='31'%20rx='4'%20fill='%23ff6fa5'/%3E%3Crect%20x='5'%20y='18'%20width='54'%20height='13'%20rx='4'%20fill='%23ffd166'/%3E%3Crect%20x='28'%20y='18'%20width='8'%20height='40'%20fill='%23d4508b'/%3E%3Cpath%20d='M32%2018C24%205%2011%208%2016%2016c3%206%2016%202%2016%202zM32%2018C40%205%2053%208%2048%2016c-3%206-16%202-16%202z'%20fill='%23d4508b'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
+  <style>
+    .gate { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+    .gate form { display: flex; flex-direction: column; gap: 14px; align-items: center; width: 100%; }
+    .pw-row { position: relative; width: 100%; max-width: 360px; }
+    .pw-row input {
+      width: 100%; font-size: 20px; text-align: center; padding: 14px 48px 14px 14px;
+      border-radius: 999px; border: 3px solid rgba(255,255,255,.45);
+      background: rgba(255,255,255,.95); color: #2d1442; outline: none;
+    }
+    .pw-row input:focus { border-color: var(--gold); }
+    .pw-row .eye {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      border: 0; background: transparent; font-size: 22px; cursor: pointer; padding: 6px 8px;
+    }
+    .msg { min-height: 24px; font-size: 16px; line-height: 1.4; }
+    .msg.err { color: #ffd0d0; font-weight: 700; }
+    .shake { animation: shakeX .4s ease; }
+    @keyframes shakeX { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
+    #success { display: none; flex-direction: column; gap: 14px; align-items: center; }
+    #success.show { display: flex; animation: fadeUp .8s ease both; }
+  </style>
 </head>
 <body>
   <div class="bg-sparks"></div>
@@ -16,19 +37,115 @@
       <p>Для Юли. С днём рождения! 💖</p>
     </div>
 
-    <a class="btn pulse" id="dl" href="#" download>⬇ Скачать сертификат</a>
+    <!-- Шаг 1: пароль -->
+    <div class="card gate" id="gate">
+      <p class="lead">🔒 Чтобы забрать подарок, введи пароль</p>
+      <form id="form" autocomplete="off">
+        <div class="pw-row">
+          <input id="pw" type="password" placeholder="пароль" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Пароль">
+          <button type="button" class="eye" id="eye" aria-label="Показать пароль">👁</button>
+        </div>
+        <button class="btn pulse" id="submit" type="submit">Открыть 🎁</button>
+      </form>
+      <p class="msg" id="msg"></p>
+      <p class="hint" id="hint" style="display:none"></p>
+    </div>
+
+    <!-- Шаг 2: после верного пароля -->
+    <div id="success">
+      <h2>Ура, пароль подошёл! 🎉</h2>
+      <p class="lead">Сертификат скачивается. Если не началось, нажми кнопку.</p>
+      <button class="btn pulse" id="again" type="button">⬇ Скачать сертификат</button>
+    </div>
 
     <p class="link-small">С любовью, твои друзья ❤️<br>Саша, Ира и Артем</p>
   </main>
 
   <script src="config.js"></script>
   <script src="app.js"></script>
+  <script src="vault.js"></script>
   <script>
-    var dl = document.getElementById("dl");
-    dl.href = CONFIG.certificate;
-    dl.setAttribute("download", CONFIG.certificateFileName);
-    launchConfetti(140);
-    setTimeout(function () { launchConfetti(90); }, 3500);
+    var form = document.getElementById("form");
+    var pw = document.getElementById("pw");
+    var msg = document.getElementById("msg");
+    var submitBtn = document.getElementById("submit");
+    var blob = null;
+
+    // Подсказка показывается, только если она задана в config.js
+    if (CONFIG.passwordHint) {
+      var h = document.getElementById("hint");
+      h.textContent = "Подсказка: " + CONFIG.passwordHint;
+      h.style.display = "block";
+    }
+
+    document.getElementById("eye").addEventListener("click", function () {
+      pw.type = pw.type === "password" ? "text" : "password";
+    });
+
+    function say(text, isErr) {
+      msg.textContent = text;
+      msg.className = "msg" + (isErr ? " err" : "");
+    }
+
+    function saveFile() {
+      if (!blob) return;
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = CONFIG.certificateFileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    }
+
+    function wrong(text) {
+      say(text, true);
+      form.classList.remove("shake");
+      void form.offsetWidth; // перезапуск анимации
+      form.classList.add("shake");
+      submitBtn.disabled = false;
+      pw.focus();
+    }
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var value = pw.value;
+      if (!value.trim()) return wrong("Введи пароль 🙂");
+      if (!(globalThis.crypto && globalThis.crypto.subtle)) {
+        return wrong("Этот браузер не умеет открывать сертификат. Попробуй Chrome или Safari.");
+      }
+
+      submitBtn.disabled = true;
+      say("Проверяю…", false);
+
+      fetch(CONFIG.certificate, { cache: "no-store" })
+        .then(function (r) {
+          if (!r.ok) throw new Error("nofile");
+          return r.arrayBuffer();
+        })
+        .then(function (buf) { return Vault.decryptBytes(buf, value); })
+        .then(function (bytes) {
+          blob = new Blob([bytes], { type: "application/pdf" });
+          pw.value = "";
+          document.getElementById("gate").style.display = "none";
+          document.getElementById("success").classList.add("show");
+          launchConfetti(160);
+          setTimeout(function () { launchConfetti(90); }, 3500);
+          saveFile();
+        })
+        .catch(function (err) {
+          if (err && err.message === "badpass") {
+            wrong("Пароль не подходит. Попробуй ещё раз 🙈");
+          } else if (err && err.message === "nofile") {
+            wrong("Сертификат ещё не загружен. Напиши друзьям 🙂");
+          } else {
+            wrong("Что-то пошло не так. Обнови страницу и попробуй снова.");
+          }
+        });
+    });
+
+    document.getElementById("again").addEventListener("click", saveFile);
   </script>
 </body>
 </html>
