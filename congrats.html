@@ -6,6 +6,10 @@
   <title>Поздравление 🎈</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20x='8'%20y='27'%20width='48'%20height='31'%20rx='4'%20fill='%23ff6fa5'/%3E%3Crect%20x='5'%20y='18'%20width='54'%20height='13'%20rx='4'%20fill='%23ffd166'/%3E%3Crect%20x='28'%20y='18'%20width='8'%20height='40'%20fill='%23d4508b'/%3E%3Cpath%20d='M32%2018C24%205%2011%208%2016%2016c3%206%2016%202%2016%202zM32%2018C40%205%2053%208%2048%2016c-3%206-16%202-16%202z'%20fill='%23d4508b'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* фото показываем целиком, без обрезки лиц (и вертикальные, и горизонтальные) */
+    .pop { aspect-ratio: auto; height: auto; object-fit: contain; }
+  </style>
 </head>
 <body>
   <div class="bg-sparks"></div>
@@ -73,12 +77,12 @@
       var img = new Image();
       img.className = "pop";
       img.onload = function () {
-        var w = stage.clientWidth, h = stage.clientHeight;
-        var size = img.getBoundingClientRect().width || 160;
-        img.style.left = Math.random() * Math.max(10, w - size - 10) + "px";
-        img.style.top = Math.random() * Math.max(10, h - size * 1.33 - 10) + "px";
         img.style.setProperty("--r", (Math.random() * 20 - 10) + "deg");
-        stage.appendChild(img);
+        stage.appendChild(img); // сначала добавляем, чтобы узнать реальный размер
+        var w = stage.clientWidth, h = stage.clientHeight;
+        var iw = img.offsetWidth || 160, ih = img.offsetHeight || 210;
+        img.style.left = Math.random() * Math.max(10, w - iw - 10) + "px";
+        img.style.top = Math.random() * Math.max(10, h - ih - 10) + "px";
         setTimeout(function () { img.remove(); }, 6200);
       };
       img.onerror = function () { /* нет файла — пропускаем */ };
